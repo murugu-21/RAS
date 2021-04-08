@@ -34,16 +34,11 @@ from PIL import Image, ImageDraw, ImageFont
 from num2words import num2words as nw
 import itertools
 
-
 def my_custom_sql(code):
     with connection.cursor() as cursor:
         cursor.execute(code)
         row = cursor.fetchall()
     return row
-
-class LoginView(viewsets.ModelViewSet):
-    serializer_class = LoginSerializer
-    
 
 @api_view(['POST'])
 def loginCheck(request):
@@ -87,10 +82,9 @@ def create_user(request):
             new_user = Login(email= data["email"], password= hb.sha256(data["password"].encode()).hexdigest(), type= data["type"])
             new_user.save()
         except:
-            return Response('db error')
+            return Response(['db error', "danger"])
         
-        return Response('Success')
-
+        return Response(['user created', 'success'])
 
 @api_view(['POST'])
 def deleteUsers(request):
@@ -103,7 +97,6 @@ def deleteUsers(request):
     login_row.delete()
     users = list(Login.objects.all().values())
     return Response(users)
-
 
 @api_view(['POST'])
 def ForgotPassword(request):
@@ -496,8 +489,6 @@ def retreive_pdf(request):
     except FileNotFoundError:
         raise Http404()
     
- 
-
 @api_view(['POST'])
 def get_chart(request):
 
@@ -516,7 +507,6 @@ def get_chart(request):
     
         return Response({"labels":labels,"datasets":[{"label":"salesreport","data":data, "backgroundColor": color
             ,}]})             
-
 
 @api_view(['POST'])
 def update_price(request):
