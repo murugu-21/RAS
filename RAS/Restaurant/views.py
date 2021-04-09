@@ -33,6 +33,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from num2words import num2words as nw
 import itertools
+import re
 
 def my_custom_sql(code):
     with connection.cursor() as cursor:
@@ -69,7 +70,14 @@ def get_users(request):
             return Response([])
         
         return Response(users)
-            
+        
+def validate_password(password):
+    reg = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{8,20}$"
+      
+    # compiling regex
+    pat = re.compile(reg)
+    # searching regex                 
+    return re.search(pat, password)            
 @api_view(['POST'])
 def create_user(request):
     if(request.method == 'POST'):
@@ -78,14 +86,17 @@ def create_user(request):
             data = request.data
             
             if Login.objects.filter(pk=data["email"]).exists():
-                return Response('User already exists')
-            new_user = Login(email= data["email"], password= hb.sha256(data["password"].encode()).hexdigest(), type= data["type"])
-            new_user.save()
+                return Response(['User already exists', "warning"])
+            mat = validate_password(data["password"])            
+            if mat:
+                new_user = Login(email= data["email"], password= hb.sha256(data["password"].encode()).hexdigest(), type= data["type"])
+                new_user.save()
+                return Response(['user created', 'success'])
+            else:
+                return Response(["Password should be 8-20 characters long and contain atleast 1 special character, lowercase, upperccase character and 1 number", "primary"])
         except:
-            return Response(['db error', "danger"])
+            return Response(['db error, user not created', "danger"])
         
-        return Response(['user created', 'success'])
-
 @api_view(['POST'])
 def deleteUsers(request):
     if(request.method == 'POST'):
@@ -137,21 +148,25 @@ def OtpValidation(request):
             user = Login.objects.get(pk=data["email"])
             user.otp = ''
             user.save()
-            return Response("Otp Invalid")
+            return Response(["Otp Invalid", "danger"])
 
 @api_view(['POST'])
 def ChangePassword(request):
     if(request.method == 'POST'):
         data = request.data
-        if (data["password"]):
+        if (data["password"] and data["email"]):
             user = Login.objects.get(pk=data["email"])
             #print(len(hb.sha256(data["password"].encode()).hexdigest()))
-            user.password = hb.sha256(data["password"].encode()).hexdigest()
-            user.save()
-            return (Response({"cango": True}))
+            mat = validate_password(data["password"])
+            if mat:
+                user.password = hb.sha256(data["password"].encode()).hexdigest()
+                user.save()
+                return (Response({"cango": True}))
+            else:
+                return Response(["Password should be 8-20 characters long and contain atleast 1 special character, lowercase, upperccase character and 1 number", "primary"])
             
         else:
-            return Response("Otp Invalid")
+            return Response(["Otp Invalid", "danger"])
 
 @api_view(['POST'])
 def CreateCsv(request):
